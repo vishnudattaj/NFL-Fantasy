@@ -1,0 +1,32 @@
+from espn_api.football import League
+import pandas as pd
+
+league = League(league_id=1957880705, year=2025)
+players = league.free_agents(size=2000)
+
+
+qbList, rbList, wrList, teList = [], [], [], []
+
+for player in players:
+    player_data = {
+        "player_name": player.name,
+        "fantasy_pts": player.projected_total_points
+    }
+    if player.position == "QB":
+        qbList.append(player_data)
+    elif player.position == "RB":
+        rbList.append(player_data)
+    elif player.position == "WR":
+        wrList.append(player_data)
+    elif player.position == "TE":
+        teList.append(player_data)
+
+qbDF = pd.DataFrame(qbList)
+rbDF = pd.DataFrame(rbList)
+wrDF = pd.DataFrame(wrList)
+teDF = pd.DataFrame(teList)
+
+qbDF.to_csv("espn_qb_predictions.csv")
+rbDF.to_csv("espn_rb_predictions.csv")
+wrDF.to_csv("espn_wr_predictions.csv")
+teDF.to_csv("espn_te_predictions.csv")
