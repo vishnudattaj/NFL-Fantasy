@@ -7,10 +7,28 @@ from xgboost import XGBRegressor
 def pastFeatures(featureList, excludeList, dataFrame, draft):
     dataFrame = pd.merge(dataFrame.drop(columns=["draft_year"]), draft, on='player_id', how='left')
     dataFrame['experience'] = dataFrame['season'] - dataFrame['draft_year']
+    dataFrame['career_max_receiving_yards'] = dataFrame.groupby('player_id')['receiving_yards'].cummax()
+    dataFrame['career_max_rushing_yards'] = dataFrame.groupby('player_id')['rushing_yards'].cummax()
+    dataFrame['career_max_passing_yards'] = dataFrame.groupby('player_id')['passing_yards'].cummax()
 
     for feature in featureList:
         if feature not in excludeList:
             dataFrame[f"Past-1-{feature}"] = dataFrame.groupby('player_id')[feature].shift(1)
+
+            def custom_rolling(x):
+                result = []
+                for i in range(len(x)):
+                    if i == 0:
+                        result.append(x.iloc[0])
+                    elif i == 1:
+                        result.append(x.iloc[:2].mean())
+                    else:
+                        result.append(x.iloc[max(0, i-3):i].mean())
+                return pd.Series(result, index=x.index)
+
+            dataFrame[f"Past-3-avg-{feature}"] = (
+                dataFrame.groupby('player_id')[feature].transform(custom_rolling)
+            )
 
     dataFrame.dropna(axis=1, how='all', inplace=True)
     dataFrame.fillna(0, inplace=True)
@@ -64,7 +82,7 @@ yearlyPlayer.drop(["season_type", "games_played_season", "games_played_career"],
 
 yearlyFeatures = yearlyPlayer.columns.tolist()
 
-excludeFeatures = ["player_id", "player_name", "position", "birth_year", "draft_round", "draft_pick", "draft_ovr", "height", "weight", "college", "season", "team", "conference", "division"]
+excludeFeatures = ["player_id", "player_name", "position", "birth_year", "draft_round", "draft_pick", "draft_ovr", "height", "weight", "college", "season", "team", "conference", "division", "career_max_receiving_yards", "td_per_target", 'age_at_rookie']
 averages = ["passer_rating", "adot", "comp_pct", "int_pct", "pass_td_pct", "ypa", "rec_td_pct", "yptarget", "ayptarget", "ypr", "rush_td_pct", "ypc", "td_pct", "yptouch", "age", "years_exp", "team_pass_attempts_share", "team_complete_pass_share", "team_passing_yards_share", "team_pass_touchdown_share", "team_targets_share", "team_receptions_share", "team_receiving_yards_share", "team_receiving_air_yards_share", "team_receiving_touchdown_share", "team_rush_attempts_share", "team_rushing_yards_share", "team_rush_touchdown_share"]
 draft_year_df = yearlyPlayer[['player_id', 'draft_year']].drop_duplicates()
 
@@ -75,23 +93,18 @@ yearlyRB = yearlyPlayer[(yearlyPlayer['position'] == "RB")].reset_index(drop=Tru
 yearlyWR = yearlyPlayer[(yearlyPlayer['position'] == "WR")].reset_index(drop=True)
 yearlyTE = yearlyPlayer[(yearlyPlayer['position'] == "TE")].reset_index(drop=True)
 
-yearlyQB_training = yearlyQB[(yearlyQB['experience'] > 0)]
-yearlyRB_training = yearlyRB[(yearlyRB['experience'] > 0)]
-yearlyWR_training = yearlyWR[(yearlyWR['experience'] > 0)]
-yearlyTE_training = yearlyTE[(yearlyTE['experience'] > 0)]
-
-qbDF = currentDataExtractor(yearlyQB, excludeFeatures, trainModel(yearlyQB_training, ["passing_yards", "rushing_yards", "rush_touchdown", "pass_touchdown", "interception", "fumble"]), ["passing_yards", "rushing_yards", "rush_touchdown", "pass_touchdown", "interception", "fumble"], "QB")
+qbDF = currentDataExtractor(yearlyQB, excludeFeatures, trainModel(yearlyQB, ["passing_yards", "rushing_yards", "rush_touchdown", "pass_touchdown", "interception", "fumble"]), ["passing_yards", "rushing_yards", "rush_touchdown", "pass_touchdown", "interception", "fumble"], "QB")
 qbDF.drop(columns=["player_id"], inplace=True)
 qbDF.sort_values(by='fantasy_pts', ascending=False).reset_index(drop=True).to_csv("qb_predictions.csv")
 
-rbDF = currentDataExtractor(yearlyRB, excludeFeatures, trainModel(yearlyRB_training, ["receiving_yards", "rushing_yards", "rush_touchdown", "receptions", "receiving_touchdown", "fumble"]), ["receiving_yards", "rushing_yards", "rush_touchdown", "receptions", "receiving_touchdown", "fumble"], "RB")
+rbDF = currentDataExtractor(yearlyRB, excludeFeatures, trainModel(yearlyRB, ["receiving_yards", "rushing_yards", "rush_touchdown", "receptions", "receiving_touchdown", "fumble"]), ["receiving_yards", "rushing_yards", "rush_touchdown", "receptions", "receiving_touchdown", "fumble"], "RB")
 rbDF.drop(columns=["player_id"], inplace=True)
 rbDF.sort_values(by='fantasy_pts', ascending=False).reset_index(drop=True).to_csv("rb_predictions.csv")
 
-wrDF = currentDataExtractor(yearlyWR, excludeFeatures, trainModel(yearlyWR_training, ["receiving_yards", "rushing_yards", "rush_touchdown", "receptions", "receiving_touchdown", "fumble"]), ["receiving_yards", "rushing_yards", "rush_touchdown", "receptions", "receiving_touchdown", "fumble"], "WR")
+wrDF = currentDataExtractor(yearlyWR, excludeFeatures, trainModel(yearlyWR, ["receiving_yards", "rushing_yards", "rush_touchdown", "receptions", "receiving_touchdown", "fumble"]), ["receiving_yards", "rushing_yards", "rush_touchdown", "receptions", "receiving_touchdown", "fumble"], "WR")
 wrDF.drop(columns=["player_id"], inplace=True)
 wrDF.sort_values(by='fantasy_pts', ascending=False).reset_index(drop=True).to_csv("wr_predictions.csv")
 
-teDF = currentDataExtractor(yearlyTE, excludeFeatures, trainModel(yearlyTE_training, ["receiving_yards", "rushing_yards", "rush_touchdown", "receptions", "receiving_touchdown", "fumble"]), ["receiving_yards", "rushing_yards", "rush_touchdown", "receptions", "receiving_touchdown", "fumble"], "TE")
+teDF = currentDataExtractor(yearlyTE, excludeFeatures, trainModel(yearlyTE, ["receiving_yards", "rushing_yards", "rush_touchdown", "receptions", "receiving_touchdown", "fumble"]), ["receiving_yards", "rushing_yards", "rush_touchdown", "receptions", "receiving_touchdown", "fumble"], "TE")
 teDF.drop(columns=["player_id"], inplace=True)
 teDF.sort_values(by='fantasy_pts', ascending=False).reset_index(drop=True).to_csv("te_predictions.csv")
