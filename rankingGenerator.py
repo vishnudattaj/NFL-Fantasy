@@ -71,7 +71,17 @@ def trainModel(trainingDF, trainColumns):
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    model = MultiOutputRegressor(XGBRegressor(learning_rate=0.1, max_depth=3))
+    model = MultiOutputRegressor(
+        XGBRegressor(
+            learning_rate=0.05,
+            max_depth=3,
+            n_estimators=100,
+            objective='reg:squarederror',
+            verbosity=0,
+            random_state=42,
+            n_jobs=-1
+        )
+    )
 
     return model.fit(X_train, y_train)
 
