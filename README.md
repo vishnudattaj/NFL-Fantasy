@@ -1,11 +1,11 @@
-# 🏈 Fantasy Football Ranking Generator  
+# Fantasy Football Ranking Generator  
 
 A machine learning–powered tool for generating, comparing, and evaluating fantasy football player rankings.  
 This project combines player historical stats, ESPN projections, and custom ML models to identify undervalued and overvalued players for the upcoming season.  
 
 ---
 
-## 🔧 How It Works  
+## How It Works  
 
 The project is composed of three main scripts:  
 
@@ -25,7 +25,7 @@ The project is composed of three main scripts:
 
 ---
 
-## 📂 Outputs  
+## Outputs  
 
 - `*_predictions.csv` → Model-based predictions for each position.  
 - `espn_*_predictions.csv` → ESPN projections for each position.  
@@ -33,7 +33,7 @@ The project is composed of three main scripts:
 
 ---
 
-## 📊 Tech Stack  
+## Tech Stack  
 
 - **Python**  
 - **Pandas** – data wrangling  
@@ -43,10 +43,10 @@ The project is composed of three main scripts:
 
 ---
 
-## ✨ Features  
+## Features  
 
-- 🏈 Machine learning–based player stat predictio
-- 📊 ESPN projections scraping & integration
-- 📉 Identification of undervalued and overvalued players 
-- 📑 Export to Excel for easy draft prep
+- Machine learning–based player stat predictio
+- ESPN projections scraping & integration
+- Identification of undervalued and overvalued players 
+- Export to Excel for easy draft prep
 
