@@ -45,7 +45,7 @@ The project is composed of three main scripts:
 
 ## Features  
 
-- Machine learning–based player stat predictio
+- Machine learning–based player stat prediction
 - ESPN projections scraping & integration
 - Identification of undervalued and overvalued players 
 - Export to Excel for easy draft prep
