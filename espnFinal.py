@@ -26,6 +26,11 @@ rbDF = pd.DataFrame(rbList)
 wrDF = pd.DataFrame(wrList)
 teDF = pd.DataFrame(teList)
 
+qbDF.sort_values(by=["fantasy_pts"], inplace=True, ascending=False)
+rbDF.sort_values(by=["fantasy_pts"], inplace=True, ascending=False)
+wrDF.sort_values(by=["fantasy_pts"], inplace=True, ascending=False)
+teDF.sort_values(by=["fantasy_pts"], inplace=True, ascending=False)
+
 qbDF.to_csv("espn_qb_final.csv")
 rbDF.to_csv("espn_rb_final.csv")
 wrDF.to_csv("espn_wr_final.csv")

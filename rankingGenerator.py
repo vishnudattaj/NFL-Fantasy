@@ -1,6 +1,5 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.multioutput import MultiOutputRegressor
 from xgboost import XGBRegressor
 
 
@@ -14,21 +13,8 @@ def pastFeatures(featureList, excludeList, dataFrame, draft):
     for feature in featureList:
         if feature not in excludeList:
             dataFrame[f"Past-1-{feature}"] = dataFrame.groupby('player_id')[feature].shift(1)
-
-            def custom_rolling(x):
-                result = []
-                for i in range(len(x)):
-                    if i == 0:
-                        result.append(x.iloc[0])
-                    elif i == 1:
-                        result.append(x.iloc[:2].mean())
-                    else:
-                        result.append(x.iloc[max(0, i-3):i].mean())
-                return pd.Series(result, index=x.index)
-
-            dataFrame[f"Past-3-avg-{feature}"] = (
-                dataFrame.groupby('player_id')[feature].transform(custom_rolling)
-            )
+            dataFrame[f"Past-2-{feature}"] = dataFrame.groupby('player_id')[feature].shift(2)
+            dataFrame[f"Past-3-{feature}"] = dataFrame.groupby('player_id')[feature].shift(3)
 
     dataFrame.dropna(axis=1, how='all', inplace=True)
     dataFrame.fillna(0, inplace=True)
@@ -37,15 +23,24 @@ def pastFeatures(featureList, excludeList, dataFrame, draft):
 
 
 def currentDataExtractor(dataFrame, excludeList, model, trainColumns, playerType):
-    featureList = dataFrame.columns.tolist()
-    dataFrame = dataFrame[(dataFrame["season"] == 2024)]
+    df_2024 = dataFrame[dataFrame["season"] == 2024].copy()
 
-    for feature in featureList:
-        if feature not in excludeList:
-            if "Past" not in feature:
-                dataFrame[f"Past-1-{feature}"] = dataFrame[feature]
+    if 'experience' in df_2024.columns:
+        df_2024['experience'] += 1
+    if 'age' in df_2024.columns:
+        df_2024['age'] += 1
 
-    X = dataFrame[[col for col in featureList if "Past" in col]]
+    for feature in df_2024.columns:
+        if feature not in excludeList and "Past" not in feature:
+            if f"Past-2-{feature}" in df_2024.columns:
+                df_2024[f"Past-3-{feature}"] = df_2024[f"Past-2-{feature}"]
+
+            if f"Past-1-{feature}" in df_2024.columns:
+                df_2024[f"Past-2-{feature}"] = df_2024[f"Past-1-{feature}"]
+
+            df_2024[f"Past-1-{feature}"] = df_2024[feature]
+
+    X = df_2024[model.feature_names_in_]
 
     y_pred = model.predict(X)
 
@@ -54,8 +49,8 @@ def currentDataExtractor(dataFrame, excludeList, model, trainColumns, playerType
         columns=trainColumns
     )
 
-    pred_df["player_id"] = dataFrame["player_id"].values
-    pred_df["player_name"] = dataFrame["player_name"].values
+    pred_df["player_id"] = df_2024["player_id"].values
+    pred_df["player_name"] = df_2024["player_name"].values
     if playerType == "QB":
         pred_df["fantasy_pts"] = (pred_df["passing_yards"] / 25) + (pred_df["pass_touchdown"] * 4) + (pred_df["rushing_yards"] / 10) + (pred_df["rush_touchdown"] * 6) - (pred_df["interception"] * 2) - (pred_df["fumble"] * 2)
     else:
@@ -66,24 +61,27 @@ def currentDataExtractor(dataFrame, excludeList, model, trainColumns, playerType
 
 
 def trainModel(trainingDF, trainColumns):
-    X = trainingDF[[col for col in trainingDF.columns.tolist() if "Past" in col]]
+    feature_names = [col for col in trainingDF.columns if "Past" in col or "career_max" in col or "experience" in col]
+    X = trainingDF[feature_names]
     y = trainingDF[trainColumns]
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    model = MultiOutputRegressor(
-        XGBRegressor(
+    model = XGBRegressor(
+            n_estimators=400,
             learning_rate=0.05,
             max_depth=3,
-            n_estimators=100,
+            tree_method="hist",
+            multi_strategy="multi_output_tree",
+            subsample=0.7,
+            colsample_bytree=0.7,
+            gamma=1,
             objective='reg:squarederror',
-            verbosity=0,
             random_state=42,
             n_jobs=-1
-        )
     )
 
-    return model.fit(X_train, y_train)
+    return model.fit(X_train, y_train ,verbose=1)
 
 
 yearlyPlayer = pd.read_csv('yearly_player_stats_offense.csv')
