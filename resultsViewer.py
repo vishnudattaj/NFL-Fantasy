@@ -29,4 +29,4 @@ for pos_name, limit in positions:
     print(f"--- {pos_name.upper()} ---")
     print(f"MAE Improvement (Higher is Better): {espnMAE - modelMAE:.2f}")
     print(f"Spearman (Higher is Better): Model: {modelRho:.3f} | ESPN: {espnRho:.3f}")
-    print(f"Skill Gap: {modelRho - espnRho:.3f}\n")
+    print(f"Spearman Improvement (Positive is Better): {modelRho - espnRho:.3f}\n")
