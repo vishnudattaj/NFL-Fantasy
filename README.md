@@ -50,7 +50,7 @@ The project is composed of five main scripts:
 - **XGBoost** – regression modeling  
 - **scikit-learn** – training & evaluation utilities  
 - **espn_api** – fetch ESPN projections
-- **scipi** - calculate using Spearman's formula
+- **SciPy** - calculate using Spearman's formula
 
 ---
 
