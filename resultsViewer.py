@@ -1,7 +1,8 @@
 import pandas as pd
+from scipy.stats import spearmanr
 
-def rankDiff(projDF, actualDF):
-    projDF = projDF[["player_name"]].copy()
+def get_metrics(projDF, actualDF, topN):
+    projDF = projDF.head(topN)[["player_name"]].copy()
     actualDF = actualDF[["player_name"]].copy()
 
     projDF["modelRank"] = projDF.index + 1
@@ -11,20 +12,21 @@ def rankDiff(projDF, actualDF):
     players["rankDiff"] = players["modelRank"] - players["actualRank"]
     players["absDiff"] = players["rankDiff"].abs()
 
-    return players["absDiff"].mean()
+    rho, p_val = spearmanr(players["modelRank"], players["actualRank"])
 
-positions = ["qb", "rb", "wr", "te"]
+    return players["absDiff"].mean(), rho
 
-for pos in positions:
-    projFile = f'{pos}_predictions.csv'
-    espnFile = f'espn_{pos}_predictions.csv'
-    actualFile = f'espn_{pos}_final.csv'
+positions = [["qb", 20], ["rb", 50], ["wr", 60], ["te", 20]]
 
-    projDF = pd.read_csv(projFile)
-    espnDF = pd.read_csv(espnFile)
-    actualDF = pd.read_csv(actualFile)
+for pos_name, limit in positions:
+    projDF = pd.read_csv(f'{pos_name}_predictions.csv')
+    espnDF = pd.read_csv(f'espn_{pos_name}_predictions.csv')
+    actualDF = pd.read_csv(f'espn_{pos_name}_final.csv')
 
-    modelDiff = rankDiff(projDF, actualDF)
-    espnDiff = rankDiff(espnDF, actualDF)
+    modelMAE, modelRho = get_metrics(projDF, actualDF, limit)
+    espnMAE, espnRho = get_metrics(espnDF, actualDF, limit)
 
-    print(f"{pos.upper()}: ESPN - Model RankDiff = {espnDiff - modelDiff:.2f}")
+    print(f"--- {pos_name.upper()} ---")
+    print(f"MAE Improvement (Higher is Better): {espnMAE - modelMAE:.2f}")
+    print(f"Spearman (Higher is Better): Model: {modelRho:.3f} | ESPN: {espnRho:.3f}")
+    print(f"Skill Gap: {modelRho - espnRho:.3f}\n")
